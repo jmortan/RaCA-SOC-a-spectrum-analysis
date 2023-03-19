@@ -117,12 +117,12 @@ class Graph:
         self.smallest_particle = 0
         self.num_divisions = 0
         self.exact_volume = 0
+        self.distribution = None
 
     def add_vertex(self, vertex_size):
         """
         Input: a size of the vertex
         """
-    
         self.vertices[self.total_vertices] = {'size': vertex_size, 'neighbors': set(), 'coordinates': None}
         self.total_vertices += 1
 
