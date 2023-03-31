@@ -129,7 +129,7 @@ def generate_soil_sample(sandFrac, siltFrac):
         entry = [size, frequency]
         sample.append(entry)
     
-    return sample, distribution
+    return sample, [distribution, (sandFrac, siltFrac)]
 
 def test_sample(soil_sample):
     """
@@ -163,7 +163,8 @@ def create_soil_graph(soil_sample):
 
     sample_information = copy.deepcopy(soil_sample)
     sample = sample_information[0]
-    distribution = sample_information[1]
+    distribution = sample_information[1][0]
+    fractions = sample_information[1][1]
     soil_graph = Graph()
 
     # Add particles from sample to graph
@@ -187,6 +188,7 @@ def create_soil_graph(soil_sample):
             sample[tuple_ix][1] -= 1
     
     # Set distribution of soil graph
+    soil_graph.fractions = fractions
     soil_graph.distribution = distribution
     
     # Set smallest particle size
