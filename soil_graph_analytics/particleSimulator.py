@@ -837,11 +837,17 @@ def particle_simulation(soil_graph):
     """
     dimension = soil_graph.boundary_size
     particle_dictionary = soil_graph.vertices
-
+    total = 0
     # Drop each particle at a random (x,y) location
     for particle in particle_dictionary.items():
+        if total > 100:
+            return False
+        start = time.time()
         drop_location = (random.uniform(0,dimension), random.uniform(0,dimension))
         drop_particle(soil_graph, particle[0], drop_location)
+        end = time.time()
+        total += end - start
+    return True
 
 def visualize_graph(soil_graph):
     """

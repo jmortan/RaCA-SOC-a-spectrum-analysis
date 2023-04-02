@@ -147,34 +147,28 @@ def get_percolation_rate(soil_graph):
 
 if __name__ == '__main__':
 
-    # Create simulation
-    for i in range(1000):
-    
-        # GENERATE RANDOM FRACTION
-        one = random.uniform(0,1)
-        two = random.uniform(0, 1 - one)
-        three = 1 - two - one
-        choice_list = [one, two, three]
-        sandFrac = random.choice(choice_list)
-        choice_list.remove(sandFrac)
-        siltFrac = random.choice(choice_list)
-
+    frac_list = [(i/20,j/20) for i in range(0, 21, 1) for j in range(0,21,1) if i/20 + j/20 <= 1]
+    for frac in frac_list:
+        sandFrac = frac[0]
+        siltFrac = frac[1]
+        with open('percolation_data.txt', 'a') as f:
+            f.write(f'\n{sandFrac} sand, {siltFrac} silt, {1 - sandFrac - siltFrac} clay\n')
+            
         # GENERATE SEED
         for j in range(10):
-
             sample = generate_soil_sample(sandFrac,siltFrac)
             soil_graph = create_soil_graph(sample)
-            particle_simulation(soil_graph)
+            try:
+                sim_result = particle_simulation(soil_graph)
+            except:
+                continue
+            if sim_result:
+                # GET PERCOLATION RATE AND WRITE TO PERCOLATION.TXT
+                traversal_graph = create_traversal_graph(soil_graph)
+                percolation_rate = get_percolation_rate(soil_graph)
+                with open('percolation_data.txt', 'a') as f:
+                    f.write(f'{percolation_rate},')
 
-            # GET PERCOLATION RATE AND WRITE TO PERCOLATION.TXT
-            traversal_graph = create_traversal_graph(soil_graph)
-            print('im here')
-            percolation_rate = get_percolation_rate(soil_graph)
-
-            with open('percolation.txt', 'a') as f:
-                f.write(f'[{sandFrac}, {siltFrac}, {percolation_rate}]')
-
-            print('ive come out')
 
 
     # Create distributions
