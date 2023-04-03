@@ -1,6 +1,8 @@
 import math
 import copy
 import bisect
+import numpy as np
+from sklearn.neighbors import NearestNeighbors
 
 #################
 # ERROR CLASSES #
@@ -92,7 +94,7 @@ def bisect_search(vertex_list, particle_z):
     return lo
 
 ################
-# GRAPH OBJECT #
+# GRAPH OBJECTS #
 ################
 
 class Graph:
@@ -117,14 +119,22 @@ class Graph:
         self.smallest_particle = 0
         self.num_divisions = 0
         self.exact_volume = 0
+        self.fractions = None
+        self.distribution = None
 
     def add_vertex(self, vertex_size):
         """
         Input: a size of the vertex
         """
-    
         self.vertices[self.total_vertices] = {'size': vertex_size, 'neighbors': set(), 'coordinates': None}
         self.total_vertices += 1
+
+    def add_traversal_vertex(self, index, particle_information):
+        """
+        Given particle information, which is the dictionary that self.vertices stores at each key,
+        adds that vertex with that information
+        """
+        self.vertices[index] = particle_information
 
     def add_edge(self, edge):
         """
@@ -190,7 +200,66 @@ class Graph:
             raise PositionNotDefinedError
         else:
             return math.dist(position1, position2)
+
+class TraversalGraph:
+    """
+    Class for creating graphs suitable for traversals based on particle simulations
+    """
+    def __init__(self, soil_graph):
+        """
+        Given a soil graph, creates a traversal graph that has contact points as nodes and edges
+        as nearby contact points
+        """
+        # Transfer distribution information
+        self.fractions = soil_graph.fractions
+        self.distribution = soil_graph.distribution
+        self.vertices = {}
+        self.edges = []
+        index_count = 0
+        self.max_neighbors = 0
+        copy_dictionary = copy.deepcopy(soil_graph.vertices)
         
+        # Find maximum amount of neighbors a particle has
+        for ix, particle in soil_graph.vertices.items():
+            if len(particle['neighbors']) > self.max_neighbors:
+               self.max_neighbors = len(particle['neighbors'])
+    
+        # Insert contact points into traversal graph
+        for index, particle_info in copy_dictionary.items():
+            for neighbor in particle_info['neighbors']:
+
+                # Gather contact point and add it as a node
+                size, location = particle_info['size'], particle_info['coordinates']
+                neighbor_size, neighbor_location = copy_dictionary[neighbor]['size'], copy_dictionary[neighbor]['coordinates']
+
+                r = [i - j for (i,j) in zip(location, neighbor_location)]
+                r = [i / np.linalg.norm(r) for i in r]
+                contact_point = [i + j for (i,j) in zip(location,[i * size for i in r])]
+
+                self.vertices[index_count] = {'contact_location': contact_point, 'between':(index, neighbor), 'neighbors': set()}
+                index_count += 1
+
+                # Remove neighbor to avoid double counting
+                copy_dictionary[neighbor]['neighbors'] -= {index}
+
+        # Logic to add edges into the graph
+        x = np.array([v['contact_location'] for _, v in self.vertices.items()])
+        k = self.max_neighbors
+        nbrs = NearestNeighbors(n_neighbors=k, algorithm='ball_tree').fit(x)
+        distances, indices = nbrs.kneighbors(x)
+
+        # Create the edges based on the nearest neighbors
+        for i, neighbors in enumerate(indices):
+            for j in neighbors:
+                if j > i:
+                    self.edges.append((i, j))
+                    self.vertices[i]['neighbors'].add(j)
+                    self.vertices[j]['neighbors'].add(i)
+        
+
+
+        
+
         
 if __name__ == "__main__" :
     sample_particles = [(.22, 1), (1.3, 1), (.002, 1)]
