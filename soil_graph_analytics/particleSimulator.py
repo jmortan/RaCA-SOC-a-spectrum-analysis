@@ -129,7 +129,7 @@ def generate_soil_sample(sandFrac, siltFrac):
         entry = [size, frequency]
         sample.append(entry)
     
-    return sample
+    return sample, [distribution, (sandFrac, siltFrac)]
 
 def test_sample(soil_sample):
     """
@@ -161,7 +161,10 @@ def create_soil_graph(soil_sample):
     of the particles    
     """
 
-    sample = copy.deepcopy(soil_sample)
+    sample_information = copy.deepcopy(soil_sample)
+    sample = sample_information[0]
+    distribution = sample_information[1][0]
+    fractions = sample_information[1][1]
     soil_graph = Graph()
 
     # Add particles from sample to graph
@@ -183,6 +186,10 @@ def create_soil_graph(soil_sample):
             del sample[tuple_ix]
         else:
             sample[tuple_ix][1] -= 1
+    
+    # Set distribution of soil graph
+    soil_graph.fractions = fractions
+    soil_graph.distribution = distribution
     
     # Set smallest particle size
     soil_graph.smallest_particle = smallest_particle
@@ -434,9 +441,7 @@ def adjust_third_contact_location(particle_info, triangle_vertices, smallest_par
 
     # Rotate and check particle until sufficiently close to in contact with second contacted particle
     while abs(math.dist(dropped_particle_location, third_contacted_location) - (dropped_particle_size + third_contacted_size)) > epsilon:
-        print(dropped_particle_location)
         print(check_overlap((dropped_particle_size, dropped_particle_location), (third_contacted_size, third_contacted_location)))
-        print(going_up)
         # Rotate particle
 
         dropped_particle_location = rotate_triangle(triangle_vertices, dropped_particle_index, delta)[dropped_particle_index]                                                                     
@@ -832,12 +837,17 @@ def particle_simulation(soil_graph):
     """
     dimension = soil_graph.boundary_size
     particle_dictionary = soil_graph.vertices
-
+    total = 0
     # Drop each particle at a random (x,y) location
     for particle in particle_dictionary.items():
+        if total > 100:
+            return False
+        start = time.time()
         drop_location = (random.uniform(0,dimension), random.uniform(0,dimension))
         drop_particle(soil_graph, particle[0], drop_location)
-
+        end = time.time()
+        total += end - start
+    return True
 
 def visualize_graph(soil_graph):
     """

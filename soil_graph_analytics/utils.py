@@ -32,7 +32,7 @@ def plot_ternary_phase_diagram(sand,clay,val=None) :
 
     # align axes to match USDA ternary phase diagram
     plt.xlim([1,0])
-
+    
     # show plot
     plt.show()
     

@@ -6,7 +6,9 @@ from scipy.stats import norm, weibull_min, weibull_max
 import scipy.integrate as integrate
 import random
 import math
+import numpy as np
 
+np.seterr(all='ignore')
 psd_linspace = np.array([0.375198,0.411878,0.452145,0.496347,0.544872,0.59814,0.656615,0.720807,0.791275,0.868632,0.953552,1.04677,1.14911,1.26145,1.38477,1.52015,1.66876,1.8319,2.011,2.2076,2.42342,2.66033,2.92042,3.20592,3.51934,3.8634,4.2411,4.65572,5.11087,5.61052,6.15902,6.76114,7.42212,8.14773,8.94427,9.81869,10.7786,11.8323,12.9891,14.2589,15.6529,17.1832,18.863,20.7071,22.7315,24.9538,27.3934,30.0714,33.0113,36.2385,39.7813,43.6704,47.9397,52.6264,57.7713,63.4192,69.6192,76.4253,83.8969,92.0988,101.103,110.987,121.837,133.748,146.824,161.177,176.935,194.232,213.221,234.066,256.948,282.068,309.644,339.916,373.147,409.626,449.672,493.633,541.892,594.869,653.025,716.866,786.949,863.883,948.338,1041.05,1142.83,1254.55,1377.2,1511.84,1659.64,1821.89,2000])
 torch_psd_linspace=torch.tensor([0.375198,0.411878,0.452145,0.496347,0.544872,0.59814,0.656615,0.720807,0.791275,0.868632,0.953552,1.04677,1.14911,1.26145,1.38477,1.52015,1.66876,1.8319,2.011,2.2076,2.42342,2.66033,2.92042,3.20592,3.51934,3.8634,4.2411,4.65572,5.11087,5.61052,6.15902,6.76114,7.42212,8.14773,8.94427,9.81869,10.7786,11.8323,12.9891,14.2589,15.6529,17.1832,18.863,20.7071,22.7315,24.9538,27.3934,30.0714,33.0113,36.2385,39.7813,43.6704,47.9397,52.6264,57.7713,63.4192,69.6192,76.4253,83.8969,92.0988,101.103,110.987,121.837,133.748,146.824,161.177,176.935,194.232,213.221,234.066,256.948,282.068,309.644,339.916,373.147,409.626,449.672,493.633,541.892,594.869,653.025,716.866,786.949,863.883,948.338,1041.05,1142.83,1254.55,1377.2,1511.84,1659.64,1821.89,2000])
 psd_logspace = np.logspace(2,2000,100)
@@ -18,9 +20,9 @@ psd_logspace = np.logspace(2,2000,100)
 class FractionError(Exception):
     pass
 
-##########################
-# DISTRIBUTION FUNCTIONS #
-##########################
+#####################################
+# FUNCTIONS TO CREATE DISTRIBUTIONS #
+#####################################
 
 def generate_distribution(sandFrac, siltFrac):
     """
@@ -103,9 +105,35 @@ def realistic_distribution(sandFrac, siltFrac):
 
     return lambda x: sum([(1/5) * distribution(x) for distribution in distributions])
 
+
+########################################
+# TOOLS FOR WORKING WITH DISTRIBUTIONS #
+########################################
+
+def bin_distribution(distribution, num_bins):
+    """
+    Given a continuous distribution and number of bins, returns a discrete distribution
+    that bins the continuous distribution into the specified number of bins.
+    """
+    bin_size = 7/num_bins
+    bin_number = 0
+    hist = []
+    bins = []
+    while bin_number < num_bins:
+        hist.append(integrate.quad(distribution, bin_size*bin_number, bin_size*(bin_number+ 1))[0])
+        bins.append(bin_size*(bin_number + 1))
+        bin_number += 1
+    return hist, bins
+
+def kl_divergence(distribution_1, distribution_2):
+    """
+    Given two discrete distributions, calculates the KL-divergence of the two distributions.
+    """
+    return sum(distribution_1[i] * math.log2(distribution_1[i]/distribution_2[i]) for i in range(len(distribution_1)))
+
 def visualize_distribution(distribution):
     """
-    Given a distribution of the form created by realistic_distribution or generate_distribution, displays
+    Given a continuous distribution of the form created by realistic_distribution or generate_distribution, displays
     on a graph
     """
     x_vals = np.linspace(0,7,1000)
@@ -117,14 +145,30 @@ def visualize_distribution(distribution):
     plt.subplots_adjust(left = .2, bottom = .2)
     plt.show()
 
+def visualize_histogram(binned_distribution):
+    """
+    Given a binned distribution of the form returned by binned_distribution(), plots
+    histogram
+    """
+    # Set plot parameters
+    hist = binned_distribution[0]
+    bins = binned_distribution[1]
+    bin_width = list(np.diff(bins))
+    bin_width.append(.35)
+
+    # Plot the histogram
+    plt.bar(bins, hist, width = bin_width)
+    plt.title('Histogram of data')
+    plt.xlabel('Value')
+    plt.ylabel('Frequency')
+    plt.show()
+
 
 if __name__ == "__main__" :
 
     # VISUALIZE DISTRIBUTION
     distribution = realistic_distribution(.5, .2)
     visualize_distribution(distribution)
-    
-
 
     # sand_scale = random.uniform(5.19,5.801)
     # silt_scale = random.uniform(3.801,4.19)
